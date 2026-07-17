@@ -1,0 +1,23 @@
+# Environments
+venv/
+.venv/
+env/
+ENV/
+*.env
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# User data & temporary files
+output.mp3
+user_speech.mp3
+uploaded_*
+
+# OS files
+.DS_Store
+Thumbs.db
