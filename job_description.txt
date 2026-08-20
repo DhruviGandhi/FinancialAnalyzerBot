@@ -1,3 +1,0 @@
-Senior Software Engineer
-
-We are looking for a senior software engineer with expertise in Python, machine learning, and cloud services (AWS). Must have experience with REST APIs, Docker, and CI/CD pipelines. Strong problem solving and communication skills required.
