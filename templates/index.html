@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FamilyFolio Advisor AI</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar">
+
+            <h2>💼 Load Client Portfolio</h2>
+
+            <label>👤 Client Full Name</label>
+
+            <input type="text" id="clientName" placeholder="e.g. PRAGNESH SARAIYA">
+
+            <button class="primary-button" onclick="fetchPortfolio()">
+
+                ⚡ Fetch & Load Portfolio
+
+            </button>
+
+            <div id="fetchStatus"></div>
+
+            <div id="loadedClient" class="loaded-client hidden">
+
+                ✅ Portfolio Loaded
+
+            </div>
+
+            <button class="secondary-button" onclick="resetPortfolio()">
+
+                🔄 Load a Different Client
+
+            </button>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="main-content">
+
+            <!-- LANDING -->
+
+            <section id="landing">
+
+                <h1>FamilyFolio Advisor AI</h1>
+
+                <p class="subtitle">
+                    Premium Wealth & Portfolio Advisory Intelligence
+                </p>
+
+                <div class="upload-hero">
+
+                    <div class="upload-icon">
+                        📊
+                    </div>
+
+                    <h2>
+                        Get Your Portfolio Insights
+                    </h2>
+
+                    <p>
+
+                        Enter your <b>full name</b> in the sidebar
+                        and click <b>Fetch & Load Portfolio</b>.
+
+                        <br><br>
+
+                        Your data is fetched securely from the server —
+                        no manual uploads needed.
+
+                    </p>
+
+                    <div class="feature-badges">
+
+                        <span>📈 Portfolio Analytics</span>
+
+                        <span>💬 AI Chat Advisor</span>
+
+                        <span>🌐 Live Server Sync</span>
+
+                        <span>⚡ Instant Answers</span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- PORTFOLIO -->
+
+            <section id="portfolioSection" class="hidden">
+
+                <h1>
+                    FamilyFolio Advisor AI
+                </h1>
+
+                <p class="subtitle">
+                    Premium Wealth & Portfolio Advisory Intelligence
+                </p>
+
+
+                <!-- KPI CARDS -->
+
+                <div class="kpi-grid">
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-label">
+                            Active Monthly SIP
+                        </div>
+
+                        <div id="totalSip" class="kpi-value">
+
+                            ₹0
+
+                        </div>
+
+                        <div class="kpi-delta">
+                            Recurring Wealth Growth
+                        </div>
+
+                    </div>
+
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-label">
+                            Cost of Investment
+                        </div>
+
+                        <div id="totalCost" class="kpi-value">
+
+                            ₹0
+
+                        </div>
+
+                        <div class="kpi-delta">
+                            Principal Amount
+                        </div>
+
+                    </div>
+
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-label">
+                            Current Value
+                        </div>
+
+                        <div id="totalCurrent" class="kpi-value">
+
+                            ₹0
+
+                        </div>
+
+                        <div id="gain" class="kpi-delta">
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="kpi-card">
+
+                        <div class="kpi-label">
+                            Portfolio XIRR
+                        </div>
+
+                        <div id="avgXirr" class="kpi-value">
+
+                            0%
+
+                        </div>
+
+                        <div class="kpi-delta">
+                            Annualised Return Rate
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CHAT -->
+
+                <h2 class="chat-title">
+                    🤖 Wealth Advisor Chat
+                </h2>
+
+
+                <div class="name-section">
+
+                    <div>
+
+                        <label>
+                            👤 Who are you asking for?
+                        </label>
+
+                        <select id="chatName">
+
+                            <option value="">
+                                — Select a person —
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div id="focusMessage" class="focus-message">
+
+                        ℹ️ No person selected —
+                        answers will cover the
+                        <b>entire family portfolio</b>.
+
+                    </div>
+
+                </div>
+
+
+                <!-- FAQ -->
+
+                <div class="faq-wrapper">
+
+                    <h3>
+                        💡 Quick Questions
+                    </h3>
+
+                    <p>
+                        No typing needed — select a question
+                        below and the advisor will answer immediately.
+                    </p>
+
+
+                    <div id="faqContainer">
+
+                    </div>
+
+                </div>
+
+
+                <!-- CHAT INPUT -->
+
+                <div class="chat-input-area">
+
+                    <input type="text" id="chatInput"
+                        placeholder="e.g. What is the exit load on my HDFC Flexi Cap fund?"
+                        onkeydown="handleEnter(event)">
+
+                    <button onclick="sendMessage()">
+
+                        Send
+
+                    </button>
+
+                </div>
+
+
+                <!-- CHAT HISTORY -->
+
+                <div id="chatHistory">
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script>
+
+        let holders = [];
+
+
+        const FAQ_CATEGORIES = [
+
+            {
+                icon: "📊",
+                label: "Portfolio Overview",
+                questions: [
+                    "What is {name} total portfolio value?",
+                    "What is {name} overall XIRR / annualised return?",
+                    "How much has {name} invested so far (cost of investment)?",
+                    "What is the total gain or loss in {name} portfolio?"
+                ]
+            },
+
+            {
+                icon: "💳",
+                label: "SIP & Investments",
+                questions: [
+                    "Show all active SIPs for {name}",
+                    "What is the monthly SIP amount for {name}?",
+                    "Which SIPs are currently paused or stopped?"
+                ]
+            },
+
+            {
+                icon: "🏆",
+                label: "Performance & Schemes",
+                questions: [
+                    "Which scheme is performing best for {name}?",
+                    "Which fund has the highest unrealised gain?",
+                    "List all equity funds in {name} portfolio",
+                    "Which funds are giving negative returns?"
+                ]
+            },
+
+            {
+                icon: "💡",
+                label: "Advice & Recommendations",
+                questions: [
+                    "Suggest portfolio improvements for {name}",
+                    "Is {name} portfolio well diversified?",
+                    "Should {name} increase SIP amount based on current performance?",
+                    "What is the risk profile of {name} portfolio?"
+                ]
+            }
+
+        ];
+
+
+        async function fetchPortfolio() {
+
+            const clientName =
+                document.getElementById(
+                    "clientName"
+                ).value.trim();
+
+
+            if (!clientName) {
+
+                showStatus(
+                    "Please enter client name.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            showStatus(
+                "🚀 Fetching portfolio from server… this may take 30–60 seconds.",
+                "info"
+            );
+
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "client_name",
+                clientName
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/fetch-portfolio",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!data.success) {
+
+                    showStatus(
+                        "❌ " + data.error,
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                showStatus(
+                    "✅ Portfolio loaded successfully!",
+                    "success"
+                );
+
+
+                document
+                    .getElementById(
+                        "loadedClient"
+                    )
+                    .classList
+                    .remove("hidden");
+
+
+                await loadPortfolio();
+
+            }
+
+            catch (error) {
+
+                showStatus(
+                    "❌ " + error,
+                    "error"
+                );
+
+            }
+
+        }
+
+
+        async function loadPortfolio() {
+
+            const response =
+                await fetch(
+                    "/portfolio"
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!data.success) {
+
+                return;
+
+            }
+
+
+            holders =
+                data.holders;
+
+
+            document
+                .getElementById(
+                    "landing"
+                )
+                .classList
+                .add("hidden");
+
+
+            document
+                .getElementById(
+                    "portfolioSection"
+                )
+                .classList
+                .remove("hidden");
+
+
+            // KPI
+
+            document.getElementById(
+                "totalSip"
+            ).innerText =
+                formatCurrency(
+                    data.metrics.total_sip
+                );
+
+
+            document.getElementById(
+                "totalCost"
+            ).innerText =
+                formatCurrency(
+                    data.metrics.total_cost
+                );
+
+
+            document.getElementById(
+                "totalCurrent"
+            ).innerText =
+                formatCurrency(
+                    data.metrics.total_current
+                );
+
+
+            document.getElementById(
+                "avgXirr"
+            ).innerText =
+                data.metrics.avg_xirr.toFixed(2)
+                + "%";
+
+
+            const gain =
+                document.getElementById(
+                    "gain"
+                );
+
+
+            const sign =
+                data.metrics.net_gain >= 0
+                    ? "▲"
+                    : "▼";
+
+
+            gain.innerText =
+                `${sign} ₹${Math.abs(data.metrics.net_gain).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2
+                })} (${data.metrics.gain_percentage.toFixed(2)}%)`;
+
+
+            gain.className =
+                "kpi-delta "
+                +
+                (
+                    data.metrics.net_gain >= 0
+                        ? "delta-up"
+                        : "delta-down"
+                );
+
+
+            // Holder dropdown
+
+            const select =
+                document.getElementById(
+                    "chatName"
+                );
+
+
+            select.innerHTML =
+                '<option value="">— Select a person —</option>';
+
+
+            holders.forEach(
+                holder => {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        holder;
+
+                    option.textContent =
+                        holder;
+
+                    select.appendChild(
+                        option
+                    );
+
+                }
+            );
+
+
+            createFAQs();
+
+        }
+
+
+        function createFAQs() {
+
+            const container =
+                document.getElementById(
+                    "faqContainer"
+                );
+
+
+            container.innerHTML = "";
+
+
+            FAQ_CATEGORIES.forEach(
+                category => {
+
+                    const title =
+                        document.createElement(
+                            "div"
+                        );
+
+                    title.className =
+                        "faq-category";
+
+                    title.innerText =
+                        `${category.icon} ${category.label}`;
+
+
+                    container.appendChild(
+                        title
+                    );
+
+
+                    const grid =
+                        document.createElement(
+                            "div"
+                        );
+
+                    grid.className =
+                        "faq-grid";
+
+
+                    category.questions.forEach(
+                        question => {
+
+                            const button =
+                                document.createElement(
+                                    "button"
+                                );
+
+                            button.className =
+                                "faq-button";
+
+
+                            button.innerText =
+                                replaceName(
+                                    question
+                                );
+
+
+                            button.onclick =
+                                function () {
+
+                                    sendMessage(
+                                        button.innerText
+                                    );
+
+                                };
+
+
+                            grid.appendChild(
+                                button
+                            );
+
+                        }
+                    );
+
+
+                    container.appendChild(
+                        grid
+                    );
+
+                }
+            );
+
+        }
+
+
+        function replaceName(
+            question
+        ) {
+
+            const select =
+                document.getElementById(
+                    "chatName"
+                );
+
+
+            const name =
+                select.value;
+
+
+            if (!name) {
+
+                return question;
+
+            }
+
+
+            const firstName =
+                name
+                    .split(" ")[0]
+                    .replace(
+                        /^./,
+                        c => c.toUpperCase()
+                    );
+
+
+            return question.replace(
+                "{name}",
+                firstName + "'s"
+            );
+
+        }
+
+
+        document
+            .getElementById(
+                "chatName"
+            )
+            .addEventListener(
+                "change",
+                function () {
+
+                    updateFocusMessage();
+
+                    createFAQs();
+
+                }
+            );
+
+
+        function updateFocusMessage() {
+
+            const name =
+                document.getElementById(
+                    "chatName"
+                ).value;
+
+
+            const box =
+                document.getElementById(
+                    "focusMessage"
+                );
+
+
+            if (name) {
+
+                const firstName =
+                    name.split(" ")[0];
+
+
+                box.innerHTML =
+                    `✅ <b>Focused on ${firstName}</b> —
+            all answers will be based on
+            ${name}'s portfolio only.`;
+
+            }
+
+            else {
+
+                box.innerHTML =
+                    `ℹ️ No person selected —
+            answers will cover the
+            <b>entire family portfolio</b>.`;
+
+            }
+
+        }
+
+
+        function handleEnter(
+            event
+        ) {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                sendMessage();
+
+            }
+
+        }
+
+
+        async function sendMessage(
+            selectedQuestion = null
+        ) {
+
+            const input =
+                document.getElementById(
+                    "chatInput"
+                );
+
+
+            const message =
+                selectedQuestion ||
+                input.value.trim();
+
+
+            if (!message) {
+
+                return;
+
+            }
+
+
+            const selectedName =
+                document.getElementById(
+                    "chatName"
+                ).value;
+
+
+            input.value = "";
+
+
+            addChatMessage(
+                "user",
+                message
+            );
+
+
+            addChatMessage(
+                "bot",
+                "Thinking..."
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/chat",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body: JSON.stringify({
+
+                                message: message,
+
+                                chat_name:
+                                    selectedName
+
+                            })
+
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                // Remove Thinking
+
+                const history =
+                    document.getElementById(
+                        "chatHistory"
+                    );
+
+
+                const last =
+                    history.lastElementChild;
+
+
+                if (
+                    last &&
+                    last.classList.contains(
+                        "chat-bot"
+                    )
+                ) {
+
+                    last.remove();
+
+                }
+
+
+                if (!data.success) {
+
+                    addChatMessage(
+                        "bot",
+                        "❌ " + data.error
+                    );
+
+                    return;
+
+                }
+
+
+                addChatMessage(
+                    "bot",
+                    data.answer
+                );
+
+            }
+
+            catch (error) {
+
+                addChatMessage(
+                    "bot",
+                    "❌ Error: " + error
+                );
+
+            }
+
+        }
+
+
+        function addChatMessage(
+            role,
+            text
+        ) {
+
+            const history =
+                document.getElementById(
+                    "chatHistory"
+                );
+
+
+            const bubble =
+                document.createElement(
+                    "div"
+                );
+
+
+            bubble.className =
+                "chat-bubble "
+                +
+                (
+                    role === "user"
+                        ? "chat-user"
+                        : "chat-bot"
+                );
+
+
+            const label =
+                role === "user"
+                    ? "You"
+                    : "Wealth Advisor";
+
+
+            bubble.innerHTML =
+                `<b>${label}:</b><br>
+         ${escapeHtml(text).replace(
+                    /\n/g,
+                    "<br>"
+                )}`;
+
+
+            history.appendChild(
+                bubble
+            );
+
+
+            bubble.scrollIntoView({
+                behavior: "smooth"
+            });
+
+        }
+
+
+        function escapeHtml(
+            text
+        ) {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.textContent =
+                text;
+
+            return div.innerHTML;
+
+        }
+
+
+        function formatCurrency(
+            value
+        ) {
+
+            return "₹"
+                +
+                Number(value)
+                    .toLocaleString(
+                        "en-IN",
+                        {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }
+                    );
+
+        }
+
+
+        function showStatus(
+            message,
+            type
+        ) {
+
+            const box =
+                document.getElementById(
+                    "fetchStatus"
+                );
+
+
+            box.innerText =
+                message;
+
+
+            box.className =
+                "status " + type;
+
+        }
+
+
+        async function resetPortfolio() {
+
+            await fetch(
+                "/reset",
+                {
+                    method: "POST"
+                }
+            );
+
+
+            location.reload();
+
+        }
+
+    </script>
+
+</body>
+
+</html>

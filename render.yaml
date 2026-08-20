@@ -1,0 +1,21 @@
+services:
+
+  - type: web
+
+    name: financial-analyzer
+
+    runtime: python
+
+    buildCommand: |
+      pip install -r requirements.txt
+      python -m playwright install --with-deps chromium
+
+    startCommand: gunicorn app:app
+
+    envVars:
+
+      - key: PYTHON_VERSION
+        value: 3.12.6
+
+      - key: SECRET_KEY
+        generateValue: true
