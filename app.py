@@ -8,6 +8,8 @@ import sys
 import datetime
 import uuid
 import ollama
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+from playwright.sync_api import sync_playwright
 
 load_dotenv()
 
