@@ -47,7 +47,6 @@ _playwright_checked = False
 
 def run_server_download(client_name):
 
-    _ensure_playwright_browsers()
 
     with sync_playwright() as p:
 
