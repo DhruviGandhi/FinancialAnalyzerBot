@@ -40,17 +40,6 @@ EMAIL = os.environ.get("M2M_EMAIL")
 _playwright_checked = False
 
 
-# ============================================================
-# PLAYWRIGHT
-# ============================================================
-
-def _ensure_playwright_browsers():
-    """
-    Chromium is installed during Render build.
-    No runtime installation is required.
-    """
-    return
-
 
 # ============================================================
 # DOWNLOAD PORTFOLIO
