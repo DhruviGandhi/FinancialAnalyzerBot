@@ -359,73 +359,95 @@
 
 
             showStatus(
-                "🚀 Fetching portfolio from server… this may take 30–60 seconds.",
+                "🚀 Starting portfolio fetch… please wait.",
                 "info"
             );
 
 
-            const formData =
-                new FormData();
-
-            formData.append(
-                "client_name",
-                clientName
-            );
+            const formData = new FormData();
+            formData.append("client_name", clientName);
 
 
+            let job_id = null;
+
+            // ------------------------------------------------
+            // Step 1: Start the background job (returns instantly)
+            // ------------------------------------------------
             try {
 
-                const response =
-                    await fetch(
-                        "/fetch-portfolio",
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    );
+                const startRes = await fetch(
+                    "/start-fetch",
+                    { method: "POST", body: formData }
+                );
 
+                const startData = await startRes.json();
 
-                const data =
-                    await response.json();
-
-
-                if (!data.success) {
-
-                    showStatus(
-                        "❌ " + data.error,
-                        "error"
-                    );
-
+                if (!startData.success) {
+                    showStatus("❌ " + startData.error, "error");
                     return;
                 }
 
+                job_id = startData.job_id;
 
-                showStatus(
-                    "✅ Portfolio loaded successfully!",
-                    "success"
-                );
-
-
-                document
-                    .getElementById(
-                        "loadedClient"
-                    )
-                    .classList
-                    .remove("hidden");
-
-
-                await loadPortfolio();
-
+            } catch (err) {
+                showStatus("❌ Failed to start fetch: " + err, "error");
+                return;
             }
 
-            catch (error) {
+
+            // ------------------------------------------------
+            // Step 2: Poll /job-status/<job_id> every 2 seconds
+            // ------------------------------------------------
+            let elapsed = 0;
+
+            const pollInterval = setInterval(async () => {
+
+                elapsed += 2;
 
                 showStatus(
-                    "❌ " + error,
-                    "error"
+                    `⏳ Logging in & fetching data… (${elapsed}s elapsed)`,
+                    "info"
                 );
 
-            }
+                try {
+
+                    const statusRes = await fetch(
+                        `/job-status/${job_id}`
+                    );
+
+                    const statusData = await statusRes.json();
+
+                    if (!statusData.success) {
+                        clearInterval(pollInterval);
+                        showStatus("❌ " + statusData.error, "error");
+                        return;
+                    }
+
+                    if (statusData.status === "done") {
+
+                        clearInterval(pollInterval);
+
+                        showStatus(
+                            "✅ Portfolio loaded successfully!",
+                            "success"
+                        );
+
+                        document
+                            .getElementById("loadedClient")
+                            .classList
+                            .remove("hidden");
+
+                        await loadPortfolio();
+                    }
+
+                    // status === "pending" → keep polling
+
+                } catch (err) {
+                    clearInterval(pollInterval);
+                    showStatus("❌ " + err, "error");
+                }
+
+            }, 2000);
 
         }
 

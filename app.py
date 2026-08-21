@@ -7,6 +7,7 @@ import subprocess
 import sys
 import datetime
 import uuid
+import threading
 import ollama
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 from playwright.sync_api import sync_playwright
@@ -69,6 +70,21 @@ USERNAME = os.environ.get("M2M_USERNAME")
 PASSWORD = os.environ.get("M2M_PASSWORD")
 EMAIL = os.environ.get("M2M_EMAIL")
 _playwright_checked = False
+
+
+# ============================================================
+# IN-MEMORY JOB STORE
+# Tracks background Playwright download jobs so the frontend
+# can poll without holding a long-lived HTTP connection.
+# ============================================================
+
+# jobs[job_id] = {
+#   "status": "pending" | "done" | "error",
+#   "file_path": str | None,
+#   "client_name": str,
+#   "error": str | None
+# }
+jobs = {}
 
 
 
@@ -452,6 +468,126 @@ def fetch_portfolio():
 
 
 # ============================================================
+# BACKGROUND JOB: START FETCH (non-blocking)
+# Returns a job_id immediately. The heavy Playwright work runs
+# in a background thread. Frontend polls /job-status/<job_id>.
+# This avoids Render's 30-second HTTP proxy timeout.
+# ============================================================
+
+def _run_job(job_id, client_name):
+    """Worker function that runs in a background thread."""
+    try:
+        file_path = run_server_download(client_name)
+        jobs[job_id]["file_path"] = file_path
+        jobs[job_id]["status"] = "done"
+    except Exception as e:
+        import traceback
+        print(f"Job {job_id} failed:", traceback.format_exc())
+        jobs[job_id]["error"] = str(e)
+        jobs[job_id]["status"] = "error"
+
+
+@app.route(
+    "/start-fetch",
+    methods=["POST"]
+)
+def start_fetch():
+
+    client_name = request.form.get(
+        "client_name", ""
+    ).strip()
+
+    if not client_name:
+        return jsonify({
+            "success": False,
+            "error": "Please enter client name."
+        })
+
+    job_id = str(uuid.uuid4())
+
+    jobs[job_id] = {
+        "status": "pending",
+        "client_name": client_name,
+        "file_path": None,
+        "error": None
+    }
+
+    t = threading.Thread(
+        target=_run_job,
+        args=(job_id, client_name),
+        daemon=True
+    )
+    t.start()
+
+    return jsonify({
+        "success": True,
+        "job_id": job_id
+    })
+
+
+# ============================================================
+# POLL JOB STATUS
+# ============================================================
+
+@app.route(
+    "/job-status/<job_id>",
+    methods=["GET"]
+)
+def job_status(job_id):
+
+    job = jobs.get(job_id)
+
+    if not job:
+        return jsonify({
+            "success": False,
+            "error": "Job not found."
+        }), 404
+
+    status = job["status"]
+
+    if status == "pending":
+        return jsonify({
+            "success": True,
+            "status": "pending"
+        })
+
+    if status == "error":
+        # Clean up
+        jobs.pop(job_id, None)
+        return jsonify({
+            "success": False,
+            "error": job["error"]
+        })
+
+    # status == "done" — load into session
+    file_path = job["file_path"]
+    client_name = job["client_name"]
+
+    analyzer = load_analyzer(file_path)
+
+    if analyzer is None:
+        jobs.pop(job_id, None)
+        return jsonify({
+            "success": False,
+            "error": "Could not parse portfolio data."
+        })
+
+    session["portfolio_id"] = str(uuid.uuid4())
+    session["file_path"] = file_path
+    session["client_name"] = client_name
+    session["chat_history"] = []
+
+    jobs.pop(job_id, None)
+
+    return jsonify({
+        "success": True,
+        "status": "done",
+        "client_name": client_name,
+        "message": "Portfolio loaded successfully."
+    })
+
+
+# ============================================================
 # GET PORTFOLIO DATA
 # ============================================================
 
@@ -460,6 +596,7 @@ def fetch_portfolio():
     methods=["GET"]
 )
 def portfolio():
+
 
     file_path = session.get(
         "file_path"
