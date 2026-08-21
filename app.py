@@ -30,6 +30,35 @@ app.secret_key = os.environ.get("SECRET_KEY", "financial-analyzer-secret-key")
 
 
 # ============================================================
+# GLOBAL ERROR HANDLERS
+# Ensure ALL errors return JSON — never HTML — so the frontend
+# can always parse the response correctly.
+# ============================================================
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"success": False, "error": "Endpoint not found."}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"success": False, "error": "Method not allowed."}), 405
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Catch-all: return JSON for any unhandled exception."""
+    import traceback
+    print("Unhandled exception:", traceback.format_exc())
+    return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================================================
 # CONFIG
 # ============================================================
 
@@ -412,10 +441,14 @@ def fetch_portfolio():
 
     except Exception as e:
 
+        import traceback
+        print("fetch_portfolio error:", traceback.format_exc())
+
+        # Always return JSON so the browser never receives an HTML error page
         return jsonify({
             "success": False,
             "error": str(e)
-        })
+        }), 500
 
 
 # ============================================================
