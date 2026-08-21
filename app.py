@@ -9,7 +9,6 @@ import datetime
 import uuid
 import threading
 import ollama
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 from playwright.sync_api import sync_playwright
 
 load_dotenv()
@@ -21,7 +20,7 @@ OLLAMA_HOST = os.getenv(
 
 ollama_client = ollama.Client(host=OLLAMA_HOST)
 
-from playwright.sync_api import sync_playwright
+
 
 
 app = Flask(__name__)
